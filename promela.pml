@@ -17,66 +17,65 @@ inline wait(monitor, number) {
     waiters++;
     atomic {
         lock ! SEED;
-        printf("%d release lock before wait", number);
+        printf("%d release lock before wait\n", number);
     }
 
     atomic {
         lock2 ! SEED;
-        printf("%d release lock2 before wait", number);
-        printf("wait %d", number);
+        printf("%d release lock2 before wait\n", number);
+        printf("wait %d\n", number);
         monitor ? SEED; // wait()
         waiters--; // in atomic only for signalAll()
     }
-    printf("awake %d", number);
+    printf("awake %d\n", number);
     
-    atomic { lock2 ? SEED; printf("%d got lock2", number); }
+    atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
     blockingQueue ? SEED;
-    atomic { lock ? SEED; printf("%d got lock", number); }
-    blockingQueue ! SEED;
+    atomic { lock ? SEED; printf("%d got lock\n", number); }
+    // blockingQueue ! SEED;
 }
 
 inline signal(monitor, number) {
     if
     :: (waiters > 0) ->
-        atomic { monitor ! SEED; printf("%d signal", number); } // signal()
+        atomic { monitor ! SEED; printf("signal %d\n", number); } // signal()
 
-        atomic { lock2 ! SEED; printf("%d release lock2", number); }
+        atomic { lock2 ! SEED; printf("%d release lock2\n", number); }
         blockingQueue ! SEED;
-        atomic { lock ! SEED; printf("%d release lock", number); }
+        atomic { lock ! SEED; printf("%d release lock\n", number); }
 
-        // blockingQueue ? SEED;
         do
-        :: (len(blockingQueue) < THREADS_COUNT - 2)
-        :: else -> break;
+        :: (nempty(blockingQueue))
+        :: empty(blockingQueue) -> break;
         od
-        atomic { lock ? SEED; printf("%d got lock", number); }
-        atomic { lock2 ? SEED; printf("%d got lock2", number); }
+        atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
+        atomic { lock ? SEED; printf("%d got lock\n", number); }
     :: else -> 
-        printf("%d signal else", number);
+        printf("%d signal else\n", number);
     fi
 }
 
-inline signalAll(monitor, number) { // TODO
+inline signalAll(monitor, number) {
     if
     :: (waiters > 0) ->
-        atomic { lock2 ! SEED; printf("%d release lock2", number); }
+        atomic { lock2 ! SEED; printf("%d release lock2\n", number); }
 
         int i;
         int waitersCopy = waiters;
         for (i : 1..waitersCopy) {
-            atomic { monitor ! SEED; printf("%d signal", number); } // signal()
+            atomic { monitor ! SEED; printf("signal %d\n", number); } // signal()
             blockingQueue ! SEED;
         }
-        atomic { lock ! SEED; printf("%d release lock", number); }
+        atomic { lock ! SEED; printf("%d release lock\n", number); }
 
         do
-        :: (len(blockingQueue) < THREADS_COUNT - 2)
-        :: else -> break;
+        :: (nempty(blockingQueue))
+        :: empty(blockingQueue) -> break;
         od
-        atomic { lock ? SEED; printf("%d got lock", number); }
-        atomic { lock2 ? SEED; printf("%d got lock2", number); }
+        atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
+        atomic { lock ? SEED; printf("%d got lock\n", number); }
     :: else -> 
-        printf("%d signal else", number);
+        printf("%d signal else\n", number);
     fi
 }
 
@@ -84,11 +83,11 @@ inline signalAll(monitor, number) { // TODO
 proctype synchronized(int number) {
     do 
     :: true -> 
-        atomic { lock ? SEED; printf("%d got lock", number); }
+        atomic { lock ? SEED; printf("%d got lock\n", number); }
         atomic { 
             if
             :: nempty(lock2) -> 
-                atomic { lock2 ? SEED; printf("%d got lock2", number); }
+                atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
                 break; 
             :: empty(lock2) -> 
                 skip;
@@ -105,17 +104,15 @@ proctype synchronized(int number) {
         signalAll(monitor, number); // 2 preparing to signal 1
     fi
     // critical section end
-    atomic { lock ! SEED; printf("%d release lock end", number); }
-    atomic { lock2 ! SEED; printf("%d release lock2 end", number); }
+    atomic { lock ! SEED; printf("%d release lock end\n", number); }
+    atomic { lock2 ! SEED; printf("%d release lock2 end\n", number); }
 }
 
 init {
     lock ! SEED;
     lock2 ! SEED;
-    run synchronized(1);
-    run synchronized(2);
-    run synchronized(3);
-    run synchronized(4);
-    run synchronized(5);
-    run synchronized(6);
+    int i;
+    for (i : 1.. THREADS_COUNT) {
+        run synchronized(i);
+    } 
 }
