@@ -3,7 +3,6 @@
 
 #define down(monitor) { monitor ? SEED }
 #define up(monitor) { monitor ! SEED }
-#define timeout false
 
 #define Monitor chan
 
@@ -15,10 +14,7 @@ int waiters = 0;
 
 inline wait(monitor, number) {
     waiters++;
-    atomic {
-        lock ! SEED;
-        printf("%d release lock before wait\n", number);
-    }
+    atomic { lock ! SEED; printf("%d release lock before wait\n", number); }
 
     atomic {
         lock2 ! SEED;
@@ -32,7 +28,6 @@ inline wait(monitor, number) {
     atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
     blockingQueue ? SEED;
     atomic { lock ? SEED; printf("%d got lock\n", number); }
-    // blockingQueue ! SEED;
 }
 
 inline signal(monitor, number) {
