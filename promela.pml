@@ -23,7 +23,7 @@ inline wait(monitor, number) {
         monitor ? SEED; // wait()
         waiters--; // in atomic only for signalAll()
     }
-    printf("awake %d\n", number);
+    printf("awakened %d\n", number);
     
     atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
     blockingQueue ? SEED;
@@ -40,7 +40,7 @@ inline signal(monitor, number) {
         atomic { lock ! SEED; printf("%d release lock\n", number); }
 
         do
-        :: (nempty(blockingQueue))
+        :: nempty(blockingQueue)
         :: empty(blockingQueue) -> break;
         od
         atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
@@ -64,7 +64,7 @@ inline signalAll(monitor, number) {
         atomic { lock ! SEED; printf("%d release lock\n", number); }
 
         do
-        :: (nempty(blockingQueue))
+        :: nempty(blockingQueue)
         :: empty(blockingQueue) -> break;
         od
         atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
@@ -94,9 +94,9 @@ proctype synchronized(int number) {
     // critical section start
     if
     :: (waiters < 2) ->
-        wait(monitor, number); // 1 waiting
+        wait(monitor, number);
     :: else ->
-        signalAll(monitor, number); // 2 preparing to signal 1
+        signalAll(monitor, number);
     fi
     // critical section end
     atomic { lock ! SEED; printf("%d release lock end\n", number); }
