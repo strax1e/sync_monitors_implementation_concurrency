@@ -5,9 +5,10 @@
 #define up(monitor) { monitor ! SEED }
 
 #define Monitor chan
+#define Lock chan
 
 Monitor monitor = [1] of { bit };
-chan lock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
+Lock lock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
 int waiters = 0;
 
 inline wait(monitor, number) {
@@ -80,7 +81,7 @@ init {
     for (i : 1.. 12) {
         initial = (initial * 31) % 100 + 1;
         run model(initial);
-    } 
+    }
 }
 
 /* signalAll(), 8 threads
