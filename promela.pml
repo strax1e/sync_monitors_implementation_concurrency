@@ -1,14 +1,15 @@
 #define SEED 1
-#define THREADS_COUNT 7
+#define THREADS_COUNT 9
 
 #define down(monitor) { monitor ? SEED }
 #define up(monitor) { monitor ! SEED }
 
 #define Monitor chan
+#define Lock chan
 
 Monitor monitor = [1] of { bit };
-chan lock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
-chan lock2 = [1] of { bit };
+Lock lock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
+Lock lock2 = [1] of { bit };
 chan blockingQueue = [THREADS_COUNT - 1] of { bit };
 int waiters = 0;
 
@@ -102,7 +103,8 @@ inline synchronized(number) {
         inCritSection++;
     :: else ->
         inCritSection--;
-        signalAll(monitor, number);
+        // signalAll(monitor, number);
+        signal(monitor, number);
         inCritSection++;
     fi
 
@@ -132,7 +134,7 @@ init {
     } 
 }
 
-/*
+/* signalAll(), 7 threads
 ltl invariant: [] (! ((inCritSection>1)))
 Depth=     775 States=    1e+06 Transitions= 2.16e+06 Memory=   275.897 t=     2.54 R=   4e+05
 Depth=    1168 States=    2e+06 Transitions= 4.26e+06 Memory=   429.901 t=     7.56 R=   3e+05
@@ -180,4 +182,64 @@ unreached in claim invariant
 
 pan: elapsed time 54.2 seconds
 pan: rate 183596.85 states/second
+*/
+
+/* signal(), 9 threads
+ltl invariant: [] (! ((inCritSection>1)))
+Depth=    1056 States=    1e+06 Transitions= 3.07e+06 Memory=   249.530 t=     4.83 R=   2e+05
+Depth=    1739 States=    2e+06 Transitions= 6.18e+06 Memory=   371.112 t=     10.7 R=   2e+05
+Depth=    1767 States=    3e+06 Transitions=  9.4e+06 Memory=   493.183 t=       17 R=   2e+05
+Depth=    3302 States=    4e+06 Transitions= 1.26e+07 Memory=   616.034 t=     22.9 R=   2e+05
+Depth=    3302 States=    5e+06 Transitions= 1.55e+07 Memory=   745.331 t=     29.3 R=   2e+05
+Depth=    3302 States=    6e+06 Transitions= 1.92e+07 Memory=   874.921 t=     36.7 R=   2e+05
+Depth=    3302 States=    7e+06 Transitions= 2.29e+07 Memory=  1003.339 t=     43.9 R=   2e+05
+Depth=    3302 States=    8e+06 Transitions= 2.62e+07 Memory=  1133.124 t=     50.5 R=   2e+05
+Depth=    3302 States=    9e+06 Transitions= 2.98e+07 Memory=  1262.909 t=     57.8 R=   2e+05
+Depth=    3302 States=    1e+07 Transitions= 3.34e+07 Memory=  1392.792 t=     65.5 R=   2e+05
+Depth=    3302 States=  1.1e+07 Transitions= 3.69e+07 Memory=  1522.675 t=     73.1 R=   2e+05
+Depth=    3302 States=  1.2e+07 Transitions= 4.04e+07 Memory=  1652.460 t=     80.2 R=   1e+05
+Depth=    3303 States=  1.3e+07 Transitions= 4.38e+07 Memory=  1782.343 t=       87 R=   1e+05
+Depth=    3327 States=  1.4e+07 Transitions= 4.71e+07 Memory=  1912.226 t=     94.2 R=   1e+05
+Depth=    3327 States=  1.5e+07 Transitions= 5.06e+07 Memory=  2041.230 t=      101 R=   1e+05
+Depth=    3327 States=  1.6e+07 Transitions= 5.41e+07 Memory=  2170.819 t=      109 R=   1e+05
+Depth=    3327 States=  1.7e+07 Transitions= 5.77e+07 Memory=  2300.702 t=      116 R=   1e+05
+Depth=    3435 States=  1.8e+07 Transitions= 6.12e+07 Memory=  2430.390 t=      125 R=   1e+05
+Depth=    3576 States=  1.9e+07 Transitions= 6.48e+07 Memory=  2560.077 t=      133 R=   1e+05
+
+(Spin Version 6.5.2 -- 6 December 2019)
+        + Partial Order Reduction
+
+Full statespace search for:
+        never claim             + (invariant)
+        assertion violations    + (if within scope of claim)
+        acceptance   cycles     + (fairness disabled)
+        invalid end states      - (disabled by never claim)
+
+State-vector 160 byte, depth reached 6441, errors: 0
+ 19652330 states, stored
+ 47496095 states, matched
+ 67148425 transitions (= stored+matched)
+  4912557 atomic steps
+hash conflicts:  11337717 (resolved)
+
+Stats on memory usage (in Megabytes):
+ 3523.481       equivalent memory usage for states (stored*(State-vector + overhead))
+ 2518.662       actual memory usage for states (compression: 71.48%)
+                state-vector as stored = 106 byte + 28 byte overhead
+  128.000       memory used for hash table (-w24)
+    0.534       memory used for DFS stack (-m10000)
+    2.451       memory lost to fragmentation
+ 2644.745       total actual memory usage
+
+
+unreached in proctype model
+        (0 of 84 states)
+unreached in init
+        (0 of 15 states)
+unreached in claim invariant
+        _spin_nvr.tmp:8, state 10, "-end-"
+        (1 of 10 states)
+
+pan: elapsed time 139 seconds
+pan: rate    141618 states/second
 */
