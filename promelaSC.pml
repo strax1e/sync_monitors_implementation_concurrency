@@ -80,11 +80,9 @@ ltl starvationFree { <>[](hash == 0) }
 
 init {
     release(lock);
-    int initial = 19 * 17;
 
     int i;
     for (i : 1.. 8) {
-        initial = (initial * 31) % 100 + 1;
         run model(i);
     }
 }
