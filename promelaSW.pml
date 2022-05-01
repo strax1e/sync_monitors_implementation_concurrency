@@ -41,12 +41,13 @@ inline signal(blockingQueue, number) {
 
         atomic { release(innerLock); printf("%d release innerLock\n", number); }
         release(synchronizer);
-        atomic { release(outerLock); printf("%d release outerLock\n", number); }
 
         do
         :: nempty(synchronizer)
         :: empty(synchronizer) -> break;
         od
+        atomic { release(outerLock); printf("%d release outerLock\n", number); }
+
         atomic { acquire(innerLock); printf("%d got innerLock\n", number); }
         atomic { acquire(outerLock); printf("%d got outerLock\n", number); }
     :: else -> 
@@ -132,12 +133,10 @@ ltl starvationFree { <>[](hash == 0) }
 init {
     release(outerLock);
     release(innerLock);
-    int initial = 19 * 17;
 
     int i;
     for (i : 1.. THREADS_COUNT) {
-        initial = (initial * 31) % 100 + 1;
-        run model(initial);
+        run model(i);
     } 
 }
 
