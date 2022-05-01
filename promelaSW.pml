@@ -1,100 +1,101 @@
 #define SEED 1
-#define THREADS_COUNT 7
+#define THREADS_COUNT 6
 
-#define down(monitor) { monitor ? SEED }
-#define up(monitor) { monitor ! SEED }
+#define acquire(lock) { lock ? SEED }
+#define release(lock) { lock ! SEED }
 
-#define Monitor chan
+#define BlockingQueue chan
 #define Lock chan
+#define Synchronizer chan
 
-Monitor monitor = [1] of { bit };
-Lock lock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
-Lock lock2 = [1] of { bit };
-chan blockingQueue = [THREADS_COUNT - 1] of { bit };
-int waiters = 0;
+BlockingQueue blockingQueue = [0] of { bit };
+Lock outerLock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
+Lock innerLock = [1] of { bit };
+Synchronizer synchronizer = [THREADS_COUNT - 1] of { bit };
 
 int inCritSection = 0;
+int waiters = 0;
 
-inline wait(monitor, number) {
+inline wait(blockingQueue, number) {
     waiters++;
-    atomic { lock ! SEED; printf("%d release lock before wait\n", number); }
+    atomic { release(outerLock); printf("%d release outerLock before wait\n", number); }
 
     atomic {
-        lock2 ! SEED;
-        printf("%d release lock2 before wait\n", number);
+        release(innerLock);
+        printf("%d release innerLock before wait\n", number);
         printf("wait %d\n", number);
-        monitor ? SEED; // wait()
+        acquire(blockingQueue); // wait()
         waiters--; // in atomic only for signalAll()
     }
     printf("awakened %d\n", number);
     
-    atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
-    blockingQueue ? SEED;
-    atomic { lock ? SEED; printf("%d got lock\n", number); }
+    atomic { acquire(innerLock); printf("%d got innerLock\n", number); }
+    acquire(synchronizer);
+    atomic { acquire(outerLock); printf("%d got outerLock\n", number); }
 }
 
-inline signal(monitor, number) {
+inline signal(blockingQueue, number) {
     if
     :: (waiters > 0) ->
-        atomic { monitor ! SEED; printf("signal %d\n", number); } // signal()
+        atomic { release(blockingQueue); printf("signal %d\n", number); } // signal()
 
-        atomic { lock2 ! SEED; printf("%d release lock2\n", number); }
-        blockingQueue ! SEED;
-        atomic { lock ! SEED; printf("%d release lock\n", number); }
+        atomic { release(innerLock); printf("%d release innerLock\n", number); }
+        release(synchronizer);
+        atomic { release(outerLock); printf("%d release outerLock\n", number); }
 
         do
-        :: nempty(blockingQueue)
-        :: empty(blockingQueue) -> break;
+        :: nempty(synchronizer)
+        :: empty(synchronizer) -> break;
         od
-        atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
-        atomic { lock ? SEED; printf("%d got lock\n", number); }
+        atomic { acquire(innerLock); printf("%d got innerLock\n", number); }
+        atomic { acquire(outerLock); printf("%d got outerLock\n", number); }
     :: else -> 
         printf("%d signal else\n", number);
     fi
 }
 
-inline signalAll(monitor, number) {
+inline signalAll(blockingQueue, number) {
     if
     :: (waiters > 0) ->
-        atomic { lock2 ! SEED; printf("%d release lock2\n", number); }
+        atomic { release(innerLock); printf("%d release innerLock\n", number); }
 
         int i;
         int waitersCopy = waiters;
         for (i : 1..waitersCopy) {
-            atomic { monitor ! SEED; printf("signal %d\n", number); } // signal()
-            blockingQueue ! SEED;
+            atomic { release(blockingQueue); printf("signal %d\n", number); } // signal()
+            release(synchronizer);
         }
-        atomic { lock ! SEED; printf("%d release lock\n", number); }
+        atomic { release(outerLock); printf("%d release outerLock\n", number); }
 
         do
-        :: nempty(blockingQueue)
-        :: empty(blockingQueue) -> break;
+        :: nempty(synchronizer)
+        :: empty(synchronizer) -> break;
         od
-        atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
-        atomic { lock ? SEED; printf("%d got lock\n", number); }
+        atomic { acquire(innerLock); printf("%d got innerLock\n", number); }
+        atomic { acquire(outerLock); printf("%d got outerLock\n", number); }
     :: else -> 
         printf("%d signal else\n", number);
     fi
 }
 
 int hash = 0;
-// SW Monitor, signal is useless while queue is empty
+// SW blockingQueue, signal is useless while queue is empty
 inline synchronized(number) {
     atomic { hash = hash + number; }
     do 
     :: true -> 
-        atomic { lock ? SEED; printf("%d got lock\n", number); }
+        atomic { acquire(outerLock); printf("%d got outerLock\n", number); }
         atomic { 
             if
-            :: nempty(lock2) -> 
-                atomic { lock2 ? SEED; printf("%d got lock2\n", number); }
+            :: nempty(innerLock) -> 
+                atomic { acquire(innerLock); printf("%d got innerLock\n", number); }
                 break; 
-            :: empty(lock2) -> 
+            :: empty(innerLock) -> 
                 skip;
             fi
         }
 
-        atomic { lock ! SEED; }
+        atomic { release(outerLock); }
     od
     // critical section start
     inCritSection++;
@@ -102,22 +103,22 @@ inline synchronized(number) {
     :: (number % 2) ->
         inCritSection--;
         atomic { hash = hash - number; }
-        wait(monitor, number);
+        wait(blockingQueue, number);
         atomic { hash = hash + number; }
         inCritSection++;
     :: else ->
         inCritSection--;
         atomic { hash = hash - number; }
-        // signalAll(monitor, number);
-        signal(monitor, number);
+        // signalAll(blockingQueue, number);
+        signal(blockingQueue, number);
         atomic { hash = hash + number; }
         inCritSection++;
     fi
 
     inCritSection--;
     // critical section end
-    atomic { lock ! SEED; printf("%d release lock end\n", number); }
-    atomic { lock2 ! SEED; printf("%d release lock2 end\n", number); }
+    atomic { release(outerLock); printf("%d release outerLock end\n", number); }
+    atomic { release(innerLock); printf("%d release innerLock end\n", number); }
     atomic { hash = hash - number; }
 }
 
@@ -129,8 +130,8 @@ ltl exclusiveAccess { []!(inCritSection > 1) }
 ltl starvationFree { <>[](hash == 0) }
 
 init {
-    lock ! SEED;
-    lock2 ! SEED;
+    release(outerLock);
+    release(innerLock);
     int initial = 19 * 17;
 
     int i;
