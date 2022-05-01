@@ -1,43 +1,45 @@
 #define SEED 1
 
-#define down(monitor) { monitor ? SEED }
-#define up(monitor) { monitor ! SEED }
+#define acquire(lock) { lock ? SEED }
+#define release(lock) { lock ! SEED }
 
-#define Monitor chan
+#define BlockingQueue chan
 #define Lock chan
+#define Synchronizer chan
 
-Monitor monitor = [1] of { bit };
+BlockingQueue blockingQueue = [0] of { bit };
 Lock lock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
+
 int waiters = 0;
 
-inline wait(monitor, number) {
+inline wait(blockingQueue, number) {
     waiters++;
     atomic {
-        lock ! SEED;
+        release(lock);
         printf("%d release lock before wait\n", number);
         printf("wait %d\n", number);
-        monitor ? SEED; // wait()
+        acquire(blockingQueue); // wait()
         waiters--; // in atomic only for signalAll()
     }
     printf("awake %d\n", number);
     
-    atomic { lock ? SEED; printf("%d got lock\n", number); }
+    atomic { acquire(lock); printf("%d got lock\n", number); }
 }
 
-inline signal(monitor, number) {
+inline signal(blockingQueue, number) {
     if
     :: (waiters > 0) ->
-        atomic { monitor ! SEED; printf("signal %d\n", number); } // signal()
+        atomic { release(blockingQueue); printf("signal %d\n", number); } // signal()
     :: else -> 
         printf("%d signal else\n", number);
     fi
 }
 
-inline signalAll(monitor, number) {
+inline signalAll(blockingQueue, number) {
     int waitersCopy = waiters;
     int i;
     for (i : 1.. waitersCopy) {
-        signal(monitor, number);
+        signal(blockingQueue, number);
     }
 }
 
@@ -47,7 +49,7 @@ int hash = 0;
 // SC Monitor, signal is useless while queue is empty
 inline synchronized(number) {
     atomic { hash = hash + number; }
-    atomic { lock ? SEED; printf("%d got lock\n", number); }
+    atomic { acquire(lock); printf("%d got lock\n", number); }
     // critical section start
     inCritSection++;
 
@@ -55,17 +57,17 @@ inline synchronized(number) {
     :: (number % 2) ->
         atomic { hash = hash - number; }
         inCritSection--;
-        wait(monitor, number);
+        wait(blockingQueue, number);
         inCritSection++;
         atomic { hash = hash + number; }
     :: else ->
-        signal(monitor, number);
-        // signalAll(monitor, number);
+        signal(blockingQueue, number);
+        // signalAll(blockingQueue, number);
     fi
 
     inCritSection--;
     // critical section end
-    atomic { lock ! SEED; printf("%d release lock end\n", number); }
+    atomic { release(lock); printf("%d release lock end\n", number); }
     atomic { hash = hash - number; }
 }
 
@@ -77,7 +79,7 @@ ltl exclusiveAccess { []!(inCritSection > 1) }
 ltl starvationFree { <>[](hash == 0) }
 
 init {
-    lock ! SEED;
+    release(lock);
     int initial = 19 * 17;
 
     int i;
