@@ -1,31 +1,13 @@
-#define SEED 1
+// SW monitor, signal() and signalAll() is useless while queue is empty
 
-#define BlockingQueue chan
-#define Lock chan
+#include "monitor-base.pml"
+
 #define Synchronizer chan
 
-BlockingQueue blockingQueue = [0] of { bit };
-Lock outerLock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
 Lock innerLock = [1] of { bit };
 Synchronizer synchronizer = [0] of { bit };
 
-int inCritSection = 0;
-int waiters = 0;
 int awakenedCount = 0;
-
-inline acquire(channel, number, name) {
-    atomic {
-        channel ? SEED;
-        printf("%d acquire %c\n", number, name);
-    }
-}
-
-inline release(channel, number, name) {
-    atomic {
-        channel ! SEED;
-        printf("%d release %c\n", number, name);
-    }
-} 
 
 inline receiveLocks(number) {
     acquire(innerLock, number, 'i');
@@ -54,10 +36,7 @@ inline wait(blockingQueue, number) {
     awakenedCount--;
 }
 
-inline awakeThread(number) {
-    release(blockingQueue, number, 'b'); // signal()
-    printf("%d signal\n", number);
-}
+
 
 inline acquireLocks(number) {
     acquire(innerLock, number, 'i');
@@ -124,8 +103,6 @@ inline releaseSynchronized(number) {
     fi
 }
 
-int hash = 0;
-// SW blockingQueue, signal is useless while queue is empty
 proctype synchronized(int number) {
     atomic { hash = hash + number; }
     acquireSynchronized(number);
@@ -143,7 +120,6 @@ proctype synchronized(int number) {
     :: else ->
         inCritSection--;
         atomic { hash = hash - number; }
-        // signalAll(blockingQueue, number);
         signalAll(blockingQueue, number);
         atomic { hash = hash + number; }
         inCritSection++;
@@ -156,17 +132,11 @@ proctype synchronized(int number) {
     atomic { hash = hash - number; }
 }
 
-ltl exclusiveAccess { []!(inCritSection > 1) }
-ltl starvationFree { <>[](hash == 0) }
-
 init {
-    release(outerLock, 0, 'o');
-    release(innerLock, 0, 'i');
+    release(outerLock, 0, 'o'); // init outerLock
+    release(innerLock, 0, 'i'); // init innerLock
 
-    int i;
-    for (i : 1.. 6) {
-        run synchronized(i);
-    } 
+    start(6);
 }
 
 /* signalAll(), 7 threads, exclusiveAccess

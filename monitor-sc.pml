@@ -1,35 +1,24 @@
-#define SEED 1
+// SC Monitor, signal() and signalAll() is useless while queue is empty
 
-#define acquire(lock) { lock ? SEED }
-#define release(lock) { lock ! SEED }
-
-#define BlockingQueue chan
-#define Lock chan
-#define Synchronizer chan
-
-BlockingQueue blockingQueue = [0] of { bit };
-Lock lock = [1] of { bit }; // взаимноисключающий доступ для крит. секции
-
-int waiters = 0;
+#include "monitor-base.pml"
 
 inline wait(blockingQueue, number) {
     waiters++;
     atomic {
-        release(lock);
-        printf("%d release lock before wait\n", number);
+        release(outerLock, number, 'l');
         printf("wait %d\n", number);
-        acquire(blockingQueue); // wait()
-        waiters--; // in atomic only for signalAll()
+        acquire(blockingQueue, number, 'b'); // wait()
+        waiters--;
     }
     printf("awake %d\n", number);
     
-    atomic { acquire(lock); printf("%d got lock\n", number); }
+    acquire(outerLock, number, 'l');
 }
 
 inline signal(blockingQueue, number) {
     if
     :: (waiters > 0) ->
-        atomic { release(blockingQueue); printf("signal %d\n", number); } // signal()
+        awakeThread(number);
     :: else -> 
         printf("%d signal else\n", number);
     fi
@@ -43,48 +32,35 @@ inline signalAll(blockingQueue, number) {
     }
 }
 
-
-int inCritSection = 0;
-int hash = 0;
-// SC Monitor, signal is useless while queue is empty
-inline synchronized(number) {
+proctype synchronized(int number) {
     atomic { hash = hash + number; }
-    atomic { acquire(lock); printf("%d got lock\n", number); }
+    acquire(outerLock, number, 'l');
+
     // critical section start
     inCritSection++;
 
     if
-    :: (number % 2) ->
+    :: (waiters < 2) ->
         atomic { hash = hash - number; }
         inCritSection--;
         wait(blockingQueue, number);
         inCritSection++;
         atomic { hash = hash + number; }
     :: else ->
-        signal(blockingQueue, number);
-        // signalAll(blockingQueue, number);
+        signalAll(blockingQueue, number);
     fi
 
     inCritSection--;
     // critical section end
-    atomic { release(lock); printf("%d release lock end\n", number); }
+
+    release(outerLock, number, 'l');
     atomic { hash = hash - number; }
 }
 
-proctype model(int number) {   
-    synchronized(number);
-}
-
-ltl exclusiveAccess { []!(inCritSection > 1) }
-ltl starvationFree { <>[](hash == 0) }
-
 init {
-    release(lock);
+    release(outerLock, 0, 'l'); // init outerLock
 
-    int i;
-    for (i : 1.. 8) {
-        run model(i);
-    }
+    start(6);
 }
 
 /* signalAll(), 8 threads, exclusiveAccess
