@@ -49,7 +49,7 @@ proctype synchronized(int number) {
         atomic { hash = hash + number; }
     :: else ->
         signalAll(blockingQueue, number);
-    fi
+    fi;
 
     inCritSection--;
     // critical section end

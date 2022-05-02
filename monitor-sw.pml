@@ -45,7 +45,7 @@ inline signal(blockingQueue, number) {
         acquireSynchronized(number);
     :: else -> 
         printf("%d signal() else\n", number);
-    fi
+    fi;
 }
 
 inline signalAll(blockingQueue, number) {
