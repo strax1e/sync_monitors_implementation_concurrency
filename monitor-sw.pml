@@ -36,8 +36,6 @@ inline wait(blockingQueue, number) {
     awakenedCount--;
 }
 
-
-
 inline acquireLocks(number) {
     acquire(innerLock, number, 'i');
     acquire(outerLock, number, 'o');
