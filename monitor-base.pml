@@ -33,7 +33,7 @@ inline awakeThread(number) {
 }
 
 inline awakeAllThreads(number) {
-	int waitersCopy = waiters;
+    int waitersCopy = waiters;
     int i;
     for (i : 1.. waitersCopy) {
         awakeThread(number);
