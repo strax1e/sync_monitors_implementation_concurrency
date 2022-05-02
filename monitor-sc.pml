@@ -20,16 +20,17 @@ inline signal(blockingQueue, number) {
     :: (waiters > 0) ->
         awakeThread(number);
     :: else -> 
-        printf("%d signal else\n", number);
-    fi
+        printf("%d signal() else\n", number);
+    fi;
 }
 
 inline signalAll(blockingQueue, number) {
-    int waitersCopy = waiters;
-    int i;
-    for (i : 1.. waitersCopy) {
-        signal(blockingQueue, number);
-    }
+    if
+    :: (waiters > 0) ->
+        awakeAllThreads(number)
+    :: else -> 
+        printf("%d signalAll() else\n", number);
+    fi;
 }
 
 proctype synchronized(int number) {

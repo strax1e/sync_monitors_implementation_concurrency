@@ -32,6 +32,14 @@ inline awakeThread(number) {
     printf("%d signal\n", number);
 }
 
+inline awakeAllThreads(number) {
+	int waitersCopy = waiters;
+    int i;
+    for (i : 1.. waitersCopy) {
+        awakeThread(number);
+    }
+}
+
 inline start(threadsCount) {
     int i;
     for (i : 1.. threadsCount) {

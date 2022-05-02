@@ -15,7 +15,7 @@ inline receiveLocks(number) {
     acquire(outerLock, number, 'o');
 }
 
-inline transferLocks(number) {
+inline transferLocksToAwakened(number) {
     release(innerLock, number, 'i');
     release(synchronizer, number, 's');
     release(outerLock, number, 'o');
@@ -40,7 +40,8 @@ inline signal(blockingQueue, number) {
     if
     :: (waiters > 0) ->
         awakeThread(number);
-        transferLocks(number);
+        transferLocksToAwakened(number);
+
         acquireSynchronized(number);
     :: else -> 
         printf("%d signal() else\n", number);
@@ -51,17 +52,13 @@ inline signalAll(blockingQueue, number) {
     if
     :: (waiters > 0) ->
         awakenedCount = awakenedCount + waiters;
-        int waitersCopy = waiters;
-        int i;
-        for (i : 1.. waitersCopy) {
-            awakeThread(number);
-        }
+        awakeAllThreads(number);
+        transferLocksToAwakened(number);
 
-        transferLocks(number);
         acquireSynchronized(number);
     :: else -> 
         printf("%d signalAll() else\n", number);
-    fi
+    fi;
 }
 
 inline acquireSynchronized(number) {
@@ -75,9 +72,8 @@ inline acquireSynchronized(number) {
                 break; 
             :: empty(innerLock) -> 
                 skip;
-            fi
+            fi;
         }
-
         release(outerLock, number, 'o');
     od
 }
@@ -90,10 +86,10 @@ inline releaseLocks(number) {
 inline releaseSynchronized(number) {
     if
     :: (awakenedCount > 0) ->
-        transferLocks(number);
+        transferLocksToAwakened(number);
     :: else ->
         releaseLocks(number);
-    fi
+    fi;
 }
 
 proctype synchronized(int number) {
@@ -116,7 +112,7 @@ proctype synchronized(int number) {
         signalAll(blockingQueue, number);
         atomic { hash = hash + number; }
         inCritSection++;
-    fi
+    fi;
 
     inCritSection--;
     // critical section end
