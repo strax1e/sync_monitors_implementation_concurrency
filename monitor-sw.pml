@@ -36,22 +36,12 @@ inline wait(blockingQueue, number) {
     awakenedCount--;
 }
 
-inline acquireLocks(number) {
-    acquire(innerLock, number, 'i');
-    acquire(outerLock, number, 'o');
-}
-
-inline releaseLocks(number) {
-    release(innerLock, number, 'i');
-    release(outerLock, number, 'o');
-}
-
 inline signal(blockingQueue, number) {
     if
     :: (waiters > 0) ->
         awakeThread(number);
         transferLocks(number);
-        acquireLocks(number);
+        acquireSynchronized(number);
     :: else -> 
         printf("%d signal() else\n", number);
     fi
@@ -90,6 +80,11 @@ inline acquireSynchronized(number) {
 
         release(outerLock, number, 'o');
     od
+}
+
+inline releaseLocks(number) {
+    release(innerLock, number, 'i');
+    release(outerLock, number, 'o');
 }
 
 inline releaseSynchronized(number) {
