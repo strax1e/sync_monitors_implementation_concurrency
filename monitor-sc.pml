@@ -3,6 +3,9 @@
 #include "monitor-base.pml"
 
 inline wait(blockingQueue, number) {
+	hash = hash - number;
+	inCritSection--;
+
     waiters++;
     atomic {
         release(outerLock, number, 'l');
@@ -13,6 +16,9 @@ inline wait(blockingQueue, number) {
     printf("awake %d\n", number);
     
     acquire(outerLock, number, 'l');
+
+	inCritSection++;
+	hash = hash + number;
 }
 
 inline signal(blockingQueue, number) {
@@ -33,34 +39,39 @@ inline signalAll(blockingQueue, number) {
     fi;
 }
 
-proctype synchronized(int number) {
-    atomic { hash = hash + number; }
-    acquire(outerLock, number, 'l');
-
-    // critical section start
-    inCritSection++;
-
-    if
-    :: (waiters < 2) ->
-        atomic { hash = hash - number; }
-        inCritSection--;
-        wait(blockingQueue, number);
-        inCritSection++;
-        atomic { hash = hash + number; }
-    :: else ->
-        signalAll(blockingQueue, number);
-    fi;
-
+inline exitCriticalSection(number) {
     inCritSection--;
-    // critical section end
 
     release(outerLock, number, 'l');
     atomic { hash = hash - number; }
 }
 
-init {
-    release(outerLock, 0, 'l'); // init outerLock
+inline enterCriticalSection(number) {
+    atomic { hash = hash + number; }
+    acquire(outerLock, number, 'l');
 
+    inCritSection++;
+}
+
+proctype model(int number) {
+	enterCriticalSection(number);
+
+    if
+    :: (waiters < 2) ->
+        wait(blockingQueue, number);
+    :: else ->
+        signalAll(blockingQueue, number);
+    fi;
+
+	exitCriticalSection(number);
+}
+
+inline initMonitor() {
+	release(outerLock, 0, 'l'); // init outerLock
+}
+
+init {
+    initMonitor();
     start(6);
 }
 

@@ -22,6 +22,9 @@ inline transferLocksToAwakened(number) {
 }
 
 inline wait(blockingQueue, number) {
+    hash = hash - number; // for ltl
+    inCritSection--;
+
     waiters++;
     release(outerLock, number, 'o');
 
@@ -34,9 +37,15 @@ inline wait(blockingQueue, number) {
 
     receiveLocks(number);
     awakenedCount--;
+
+    inCritSection++;
+    hash = hash + number;
 }
 
 inline signal(blockingQueue, number) {
+    hash = hash - number;
+    inCritSection--;
+
     if
     :: (waiters > 0) ->
         awakeThread(number);
@@ -46,9 +55,15 @@ inline signal(blockingQueue, number) {
     :: else -> 
         printf("%d signal() else\n", number);
     fi;
+
+    inCritSection++;
+    hash = hash + number;
 }
 
 inline signalAll(blockingQueue, number) {
+    hash = hash - number;
+    inCritSection--;
+
     if
     :: (waiters > 0) ->
         awakenedCount = awakenedCount + waiters;
@@ -59,6 +74,9 @@ inline signalAll(blockingQueue, number) {
     :: else -> 
         printf("%d signalAll() else\n", number);
     fi;
+
+    inCritSection++;
+    hash = hash + number;
 }
 
 inline acquireSynchronized(number) {
@@ -92,39 +110,40 @@ inline releaseSynchronized(number) {
     fi;
 }
 
-proctype synchronized(int number) {
-    atomic { hash = hash + number; }
-    acquireSynchronized(number);
-
-    // critical section start
-    inCritSection++;
-
-    if
-    :: (waiters < 2) ->
-        inCritSection--;
-        atomic { hash = hash - number; }
-        wait(blockingQueue, number);
-        atomic { hash = hash + number; }
-        inCritSection++;
-    :: else ->
-        inCritSection--;
-        atomic { hash = hash - number; }
-        signalAll(blockingQueue, number);
-        atomic { hash = hash + number; }
-        inCritSection++;
-    fi;
-
+inline exitCriticalSection(number) {
     inCritSection--;
-    // critical section end
 
     releaseSynchronized(number);
     atomic { hash = hash - number; }
 }
 
-init {
+inline enterCriticalSection(number) {
+    atomic { hash = hash + number; }
+    acquireSynchronized(number);
+
+    inCritSection++;
+}
+
+proctype model(int number) {
+    enterCriticalSection(number);
+
+    if
+    :: (waiters < 2) ->
+        wait(blockingQueue, number);
+    :: else ->
+        signalAll(blockingQueue, number);
+    fi;
+
+    exitCriticalSection(number);
+}
+
+inline initMonitor() {
     release(outerLock, 0, 'o'); // init outerLock
     release(innerLock, 0, 'i'); // init innerLock
+}
 
+init {
+    initMonitor();
     start(6);
 }
 

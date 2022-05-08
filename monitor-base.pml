@@ -10,8 +10,8 @@ int waiters = 0;
 int inCritSection = 0;
 int hash = 0; 
 
-ltl exclusiveAccess { []!(inCritSection > 1) }
-ltl starvationFree { <>[](hash == 0) }
+ltl exclusiveAccess { always !(inCritSection > 1) }
+ltl starvationFree { eventually always (hash == 0) }
 
 inline acquire(channel, number, name) {
     atomic {
@@ -43,6 +43,6 @@ inline awakeAllThreads(number) {
 inline start(threadsCount) {
     int i;
     for (i : 1.. threadsCount) {
-        run synchronized(i);
+        run model(i);
     }
 }
