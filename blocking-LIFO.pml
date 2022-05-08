@@ -1,7 +1,7 @@
 #include "monitor-sc.pml"
 
-#define THREADS_COUNT 8
-#define MAX_SIZE 3
+#define THREADS_COUNT 6
+#define MAX_SIZE 2
 
 int queue[MAX_SIZE];
 int size = 0;
@@ -62,5 +62,5 @@ init {
     }
 }
 
-ltl sizeInvariant { always (size >= 0 && size <= THREADS_COUNT && size <= MAX_SIZE) };
-ltl assertThatSizeBecomeZero { eventually always (size == 0) }
+ltl structInvariant { always (size >= 0 && size <= MAX_SIZE) };
+ltl modelInvariant { eventually always (size == 0 && size <= THREADS_COUNT / 2) }
