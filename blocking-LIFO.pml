@@ -63,4 +63,4 @@ init {
 }
 
 ltl structInvariant { always (size >= 0 && size <= MAX_SIZE) };
-ltl modelInvariant { eventually always (size == 0 && size <= THREADS_COUNT / 2) }
+ltl modelInvariant { eventually always (size == 0) && always (size <= THREADS_COUNT / 2) }
