@@ -10,141 +10,140 @@ Synchronizer synchronizer = [0] of { bit };
 int awakenedCount = 0;
 
 inline receiveLocks(number) {
-    acquire(innerLock, number, 'i');
-    acquire(synchronizer, number, 's');
-    acquire(outerLock, number, 'o');
+	acquire(innerLock, number, 'i');
+	acquire(synchronizer, number, 's');
+	acquire(outerLock, number, 'o');
 }
 
 inline transferLocksToAwakened(number) {
-    release(innerLock, number, 'i');
-    release(synchronizer, number, 's');
-    release(outerLock, number, 'o');
+	release(innerLock, number, 'i');
+	release(synchronizer, number, 's');
+	release(outerLock, number, 'o');
 }
 
-inline wait(blockingQueue, number) {
-    hash = hash - number; // for ltl
-    inCritSection--;
+inline wait(condition, number) {
+	hash = hash - number; // for ltl
+	inCritSection--;
 
-    waiters++;
-    release(outerLock, number, 'o');
+	waiters++;
+	release(outerLock, number, 'o');
 
-    atomic {
-        release(innerLock, number, 'i');
-        printf("%d wait\n", number);
-        acquire(blockingQueue, number, 'b'); // wait()
-        waiters--; // in atomic only for signalAll()
-    }
+	atomic {
+		release(innerLock, number, 'i');
+		printf("%d wait\n", number);
+		acquire(condition, number, 'b'); // wait()
+	}
 
-    receiveLocks(number);
-    awakenedCount--;
+	receiveLocks(number);
+	awakenedCount--;
 
-    inCritSection++;
-    hash = hash + number;
+	inCritSection++;
+	hash = hash + number;
 }
 
-inline signal(blockingQueue, number) {
-    hash = hash - number;
-    inCritSection--;
+inline signal(condition, number) {
+	hash = hash - number;
+	inCritSection--;
 
-    if
-    :: (waiters > 0) ->
-        awakeThread(number);
-        transferLocksToAwakened(number);
+	if
+	:: (waiters > 0) ->
+		awakeThread(condition, number);
+		transferLocksToAwakened(number);
 
-        acquireSynchronized(number);
-    :: else -> 
-        printf("%d signal() else\n", number);
-    fi;
+		acquireSynchronized(number);
+	:: else -> 
+		printf("%d signal() else\n", number);
+	fi;
 
-    inCritSection++;
-    hash = hash + number;
+	inCritSection++;
+	hash = hash + number;
 }
 
-inline signalAll(blockingQueue, number) {
-    hash = hash - number;
-    inCritSection--;
+inline signalAll(condition, number) {
+	hash = hash - number;
+	inCritSection--;
 
-    if
-    :: (waiters > 0) ->
-        awakenedCount = awakenedCount + waiters;
-        awakeAllThreads(number);
-        transferLocksToAwakened(number);
+	if
+	:: (waiters > 0) ->
+		awakenedCount = awakenedCount + waiters;
+		awakeAllThreads(condition, number);
+		transferLocksToAwakened(number);
 
-        acquireSynchronized(number);
-    :: else -> 
-        printf("%d signalAll() else\n", number);
-    fi;
+		acquireSynchronized(number);
+	:: else -> 
+		printf("%d signalAll() else\n", number);
+	fi;
 
-    inCritSection++;
-    hash = hash + number;
+	inCritSection++;
+	hash = hash + number;
 }
 
 inline acquireSynchronized(number) {
-    do 
-    :: true -> 
-        acquire(outerLock, number, 'o');
-        atomic { 
-            if
-            :: nempty(innerLock) -> 
-                acquire(innerLock, number, 'i');
-                break; 
-            :: empty(innerLock) -> 
-                skip;
-            fi;
-        }
-        release(outerLock, number, 'o');
-    od
+	do 
+	:: true -> 
+		acquire(outerLock, number, 'o');
+		atomic { 
+			if
+			:: nempty(innerLock) -> 
+				acquire(innerLock, number, 'i');
+				break; 
+			:: empty(innerLock) -> 
+				skip;
+			fi;
+		}
+		release(outerLock, number, 'o');
+	od
 }
 
 inline releaseLocks(number) {
-    release(innerLock, number, 'i');
-    release(outerLock, number, 'o');
+	release(innerLock, number, 'i');
+	release(outerLock, number, 'o');
 }
 
 inline releaseSynchronized(number) {
-    if
-    :: (awakenedCount > 0) ->
-        transferLocksToAwakened(number);
-    :: else ->
-        releaseLocks(number);
-    fi;
+	if
+	:: (awakenedCount > 0) ->
+		transferLocksToAwakened(number);
+	:: else ->
+		releaseLocks(number);
+	fi;
 }
 
 inline exitCriticalSection(number) {
-    inCritSection--;
+	inCritSection--;
 
-    releaseSynchronized(number);
-    atomic { hash = hash - number; }
+	releaseSynchronized(number);
+	atomic { hash = hash - number; }
 }
 
 inline enterCriticalSection(number) {
-    atomic { hash = hash + number; }
-    acquireSynchronized(number);
+	atomic { hash = hash + number; }
+	acquireSynchronized(number);
 
-    inCritSection++;
+	inCritSection++;
 }
 
 proctype model(int number) {
-    enterCriticalSection(number);
+	enterCriticalSection(number);
 
-    if
-    :: (waiters < 2) ->
-        wait(blockingQueue, number);
-    :: else ->
-        signalAll(blockingQueue, number);
-    fi;
+	if
+	:: (waiters < 2) ->
+		wait(blockingQueue, number);
+	:: else ->
+		signalAll(blockingQueue, number);
+	fi;
 
-    exitCriticalSection(number);
+	exitCriticalSection(number);
 }
 
 inline initMonitor() {
-    release(outerLock, 0, 'o'); // init outerLock
-    release(innerLock, 0, 'i'); // init innerLock
+	release(outerLock, 0, 'o'); // init outerLock
+	release(innerLock, 0, 'i'); // init innerLock
 }
 
 init {
-    initMonitor();
-    start(6);
+	initMonitor();
+	start(6);
 }
 
 /* signalAll(), 7 threads, exclusiveAccess
@@ -160,13 +159,13 @@ Depth=    1168 States=    8e+06 Transitions= 1.82e+07 Memory=  1363.593 t=     4
 Depth=    1168 States=    9e+06 Transitions= 2.06e+07 Memory=  1520.233 t=     48.1 R=   2e+05
 
 (Spin Version 6.5.2 -- 6 December 2019)
-        + Partial Order Reduction
+		+ Partial Order Reduction
 
 Full statespace search for:
-        never claim             + (exclusiveAccess)
-        assertion violations    + (if within scope of claim)
-        acceptance   cycles     + (fairness disabled)
-        invalid end states      - (disabled by never claim)
+		never claim             + (exclusiveAccess)
+		assertion violations    + (if within scope of claim)
+		acceptance   cycles     + (fairness disabled)
+		invalid end states      - (disabled by never claim)
 
 State-vector 192 byte, depth reached 1168, errors: 0
   9950949 states, stored
@@ -178,20 +177,20 @@ hash conflicts:   2042752 (resolved)
 Stats on memory usage (in Megabytes):
  2087.792       equivalent memory usage for states (stored*(State-vector + overhead))
  1540.987       actual memory usage for states (compression: 73.81%)
-                state-vector as stored = 134 byte + 28 byte overhead
+				state-vector as stored = 134 byte + 28 byte overhead
   128.000       memory used for hash table (-w24)
-    0.534       memory used for DFS stack (-m10000)
-    1.242       memory lost to fragmentation
+	0.534       memory used for DFS stack (-m10000)
+	1.242       memory lost to fragmentation
  1668.280       total actual memory usage
 
 
 unreached in proctype model
-        (0 of 94 states)
+		(0 of 94 states)
 unreached in init
-        (0 of 15 states)
+		(0 of 15 states)
 unreached in claim invariant
-        _spin_nvr.tmp:8, state 10, "-end-"
-        (1 of 10 states)
+		_spin_nvr.tmp:8, state 10, "-end-"
+		(1 of 10 states)
 
 pan: elapsed time 54.2 seconds
 pan: rate 183596.85 states/second
@@ -220,13 +219,13 @@ Depth=    3435 States=  1.8e+07 Transitions= 6.12e+07 Memory=  2430.390 t=      
 Depth=    3576 States=  1.9e+07 Transitions= 6.48e+07 Memory=  2560.077 t=      133 R=   1e+05
 
 (Spin Version 6.5.2 -- 6 December 2019)
-        + Partial Order Reduction
+		+ Partial Order Reduction
 
 Full statespace search for:
-        never claim             + (exclusiveAccess)
-        assertion violations    + (if within scope of claim)
-        acceptance   cycles     + (fairness disabled)
-        invalid end states      - (disabled by never claim)
+		never claim             + (exclusiveAccess)
+		assertion violations    + (if within scope of claim)
+		acceptance   cycles     + (fairness disabled)
+		invalid end states      - (disabled by never claim)
 
 State-vector 160 byte, depth reached 6441, errors: 0
  19652330 states, stored
@@ -238,20 +237,20 @@ hash conflicts:  11337717 (resolved)
 Stats on memory usage (in Megabytes):
  3523.481       equivalent memory usage for states (stored*(State-vector + overhead))
  2518.662       actual memory usage for states (compression: 71.48%)
-                state-vector as stored = 106 byte + 28 byte overhead
+				state-vector as stored = 106 byte + 28 byte overhead
   128.000       memory used for hash table (-w24)
-    0.534       memory used for DFS stack (-m10000)
-    2.451       memory lost to fragmentation
+	0.534       memory used for DFS stack (-m10000)
+	2.451       memory lost to fragmentation
  2644.745       total actual memory usage
 
 
 unreached in proctype model
-        (0 of 84 states)
+		(0 of 84 states)
 unreached in init
-        (0 of 15 states)
+		(0 of 15 states)
 unreached in claim invariant
-        _spin_nvr.tmp:8, state 10, "-end-"
-        (1 of 10 states)
+		_spin_nvr.tmp:8, state 10, "-end-"
+		(1 of 10 states)
 
 pan: elapsed time 139 seconds
 pan: rate    141618 states/second
@@ -280,13 +279,13 @@ Depth=    1922 States=  1.7e+07 Transitions= 7.16e+07 Memory=  2051.386 t=     9
 Depth=    1922 States=  1.8e+07 Transitions= 7.57e+07 Memory=  2165.839 t=      101 R=   2e+05
 
 (Spin Version 6.5.1 -- 3 June 2021)
-        + Partial Order Reduction
+		+ Partial Order Reduction
 
 Full statespace search for:
-        never claim             + (starvationFree)
-        assertion violations    + (if within scope of claim)
-        acceptance   cycles     - (not selected)
-        invalid end states      - (disabled by never claim)
+		never claim             + (starvationFree)
+		assertion violations    + (if within scope of claim)
+		acceptance   cycles     - (not selected)
+		invalid end states      - (disabled by never claim)
 
 State-vector 136 byte, depth reached 1922, errors: 0
  18963418 states, stored
@@ -298,19 +297,19 @@ hash conflicts:  16210837 (resolved)
 Stats on memory usage (in Megabytes):
  2965.928       equivalent memory usage for states (stored*(State-vector + overhead))
  2148.634       actual memory usage for states (compression: 72.44%)
-                state-vector as stored = 91 byte + 28 byte overhead
+				state-vector as stored = 91 byte + 28 byte overhead
   128.000       memory used for hash table (-w24)
-    0.534       memory used for DFS stack (-m10000)
+	0.534       memory used for DFS stack (-m10000)
  2276.190       total actual memory usage
 
 
 unreached in proctype model
-        (0 of 96 states)
+		(0 of 96 states)
 unreached in init
-        (0 of 15 states)
+		(0 of 15 states)
 unreached in claim free
-        _spin_nvr.tmp:10, state 13, "-end-"
-        (1 of 13 states)
+		_spin_nvr.tmp:10, state 13, "-end-"
+		(1 of 13 states)
 
 pan: elapsed time 106 seconds
 pan: rate 178917.05 states/second

@@ -2,66 +2,65 @@
 
 #include "monitor-base.pml"
 
-inline wait(blockingQueue, number) {
+inline wait(condition, number) {
 	hash = hash - number;
 	inCritSection--;
 
-    waiters++;
-    atomic {
-        release(outerLock, number, 'l');
-        printf("wait %d\n", number);
-        acquire(blockingQueue, number, 'b'); // wait()
-        waiters--;
-    }
-    printf("awake %d\n", number);
-    
-    acquire(outerLock, number, 'l');
+	waiters++;
+	atomic {
+		release(outerLock, number, 'l');
+		printf("wait %d\n", number);
+		acquire(condition, number, 'b'); // wait()
+	}
+	printf("awake %d\n", number);
+	
+	acquire(outerLock, number, 'l');
 
 	inCritSection++;
 	hash = hash + number;
 }
 
-inline signal(blockingQueue, number) {
-    if
-    :: (waiters > 0) ->
-        awakeThread(number);
-    :: else -> 
-        printf("%d signal() else\n", number);
-    fi;
+inline signal(condition, number) {
+	if
+	:: (waiters > 0) ->
+		awakeThread(condition, number);
+	:: else -> 
+		printf("%d signal() else\n", number);
+	fi;
 }
 
-inline signalAll(blockingQueue, number) {
-    if
-    :: (waiters > 0) ->
-        awakeAllThreads(number)
-    :: else -> 
-        printf("%d signalAll() else\n", number);
-    fi;
+inline signalAll(condition, number) {
+	if
+	:: (waiters > 0) ->
+		awakeAllThreads(condition, number)
+	:: else -> 
+		printf("%d signalAll() else\n", number);
+	fi;
 }
 
 inline exitCriticalSection(number) {
-    inCritSection--;
+	inCritSection--;
 
-    release(outerLock, number, 'l');
-    atomic { hash = hash - number; }
+	release(outerLock, number, 'l');
+	atomic { hash = hash - number; }
 }
 
 inline enterCriticalSection(number) {
-    atomic { hash = hash + number; }
-    acquire(outerLock, number, 'l');
+	atomic { hash = hash + number; }
+	acquire(outerLock, number, 'l');
 
-    inCritSection++;
+	inCritSection++;
 }
 
 proctype model(int number) {
 	enterCriticalSection(number);
 
-    if
-    :: (waiters < 2) ->
-        wait(blockingQueue, number);
-    :: else ->
-        signalAll(blockingQueue, number);
-    fi;
+	if
+	:: (waiters < 2) ->
+		wait(blockingQueue, number);
+	:: else ->
+		signalAll(blockingQueue, number);
+	fi;
 
 	exitCriticalSection(number);
 }
@@ -71,8 +70,8 @@ inline initMonitor() {
 }
 
 init {
-    initMonitor();
-    start(6);
+	initMonitor();
+	start(6);
 }
 
 /* signalAll(), 8 threads, exclusiveAccess
@@ -83,13 +82,13 @@ Depth=     255 States=    3e+06 Transitions= 3.98e+06 Memory=   579.413 t=     9
 Depth=     255 States=    4e+06 Transitions= 5.33e+06 Memory=   733.515 t=     12.3 R=   3e+05
 
 (Spin Version 6.5.2 -- 6 December 2019)
-        + Partial Order Reduction
+		+ Partial Order Reduction
 
 Full statespace search for:
-        never claim             + (exclusiveAccess)
-        assertion violations    + (if within scope of claim)
-        acceptance   cycles     + (fairness disabled)
-        invalid end states      - (disabled by never claim)
+		never claim             + (exclusiveAccess)
+		assertion violations    + (if within scope of claim)
+		acceptance   cycles     + (fairness disabled)
+		invalid end states      - (disabled by never claim)
 
 State-vector 192 byte, depth reached 255, errors: 0
   4272341 states, stored
@@ -101,19 +100,19 @@ hash conflicts:    111218 (resolved)
 Stats on memory usage (in Megabytes):
   896.373       equivalent memory usage for states (stored*(State-vector + overhead))
   648.622       actual memory usage for states (compression: 72.36%)
-                state-vector as stored = 131 byte + 28 byte overhead
+				state-vector as stored = 131 byte + 28 byte overhead
   128.000       memory used for hash table (-w24)
-    0.534       memory used for DFS stack (-m10000)
+	0.534       memory used for DFS stack (-m10000)
   776.581       total actual memory usage
 
 
 unreached in proctype model
-        (0 of 48 states)
+		(0 of 48 states)
 unreached in init
-        (0 of 14 states)
+		(0 of 14 states)
 unreached in claim invariant
-        _spin_nvr.tmp:8, state 10, "-end-"
-        (1 of 10 states)
+		_spin_nvr.tmp:8, state 10, "-end-"
+		(1 of 10 states)
 
 pan: elapsed time 13.2 seconds
 pan: rate 322928.27 states/second
@@ -130,13 +129,13 @@ Depth=     321 States=    6e+06 Transitions= 1.04e+07 Memory=   940.448 t=     2
 Depth=     321 States=    7e+06 Transitions= 1.21e+07 Memory=  1077.851 t=     33.5 R=   2e+05
 
 (Spin Version 6.5.2 -- 6 December 2019)
-        + Partial Order Reduction
+		+ Partial Order Reduction
 
 Full statespace search for:
-        never claim             + (exclusiveAccess)
-        assertion violations    + (if within scope of claim)
-        acceptance   cycles     + (fairness disabled)
-        invalid end states      - (disabled by never claim)
+		never claim             + (exclusiveAccess)
+		assertion violations    + (if within scope of claim)
+		acceptance   cycles     + (fairness disabled)
+		invalid end states      - (disabled by never claim)
 
 State-vector 160 byte, depth reached 321, errors: 0
   7828883 states, stored
@@ -148,19 +147,19 @@ hash conflicts:    718957 (resolved)
 Stats on memory usage (in Megabytes):
  1403.646       equivalent memory usage for states (stored*(State-vector + overhead))
  1063.664       actual memory usage for states (compression: 75.78%)
-                state-vector as stored = 114 byte + 28 byte overhead
+				state-vector as stored = 114 byte + 28 byte overhead
   128.000       memory used for hash table (-w24)
-    0.534       memory used for DFS stack (-m10000)
+	0.534       memory used for DFS stack (-m10000)
  1191.718       total actual memory usage
 
 
 unreached in proctype model
-        (0 of 37 states)
+		(0 of 37 states)
 unreached in init
-        (0 of 14 states)
+		(0 of 14 states)
 unreached in claim invariant
-        _spin_nvr.tmp:8, state 10, "-end-"
-        (1 of 10 states)
+		_spin_nvr.tmp:8, state 10, "-end-"
+		(1 of 10 states)
 
 pan: elapsed time 37.4 seconds
 pan: rate 209328.42 states/second
@@ -191,13 +190,13 @@ Depth=     265 States=    2e+07 Transitions=  9.9e+07 Memory=  1325.116 t=      
 Depth=     265 States=  2.1e+07 Transitions= 1.05e+08 Memory=  1386.151 t=      183 R=   1e+05
 
 (Spin Version 6.5.2 -- 6 December 2019)
-        + Partial Order Reduction
+		+ Partial Order Reduction
 
 Full statespace search for:
-        never claim             + (starvationFree)
-        assertion violations    + (if within scope of claim)
-        acceptance   cycles     + (fairness disabled)
-        invalid end states      - (disabled by never claim)
+		never claim             + (starvationFree)
+		assertion violations    + (if within scope of claim)
+		acceptance   cycles     + (fairness disabled)
+		invalid end states      - (disabled by never claim)
 
 State-vector 128 byte, depth reached 265, errors: 0
  10789171 states, stored (2.15783e+07 visited)
@@ -209,19 +208,19 @@ hash conflicts:  15055557 (resolved)
 Stats on memory usage (in Megabytes):
  1605.139       equivalent memory usage for states (stored*(State-vector + overhead))
  1293.193       actual memory usage for states (compression: 80.57%)
-                state-vector as stored = 98 byte + 28 byte overhead
+				state-vector as stored = 98 byte + 28 byte overhead
   128.000       memory used for hash table (-w24)
-    0.534       memory used for DFS stack (-m10000)
+	0.534       memory used for DFS stack (-m10000)
  1421.503       total actual memory usage
 
 
 unreached in proctype model
-        (0 of 45 states)
+		(0 of 45 states)
 unreached in init
-        (0 of 14 states)
+		(0 of 14 states)
 unreached in claim starvationFree
-        _spin_nvr.tmp:19, state 13, "-end-"
-        (1 of 13 states)
+		_spin_nvr.tmp:19, state 13, "-end-"
+		(1 of 13 states)
 
 pan: elapsed time 191 seconds
 pan: rate 113058.11 states/second
