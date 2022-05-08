@@ -1,6 +1,6 @@
 #include "monitor-sc.pml"
 
-#define THEADS_COUNT 8
+#define THREADS_COUNT 8
 #define MAX_SIZE 3
 
 int queue[MAX_SIZE];
@@ -54,7 +54,7 @@ init {
     initMonitor();
 
     int i;
-    for (i : 1.. THEADS_COUNT) {
+    for (i : 1.. THREADS_COUNT) {
         if
         :: i % 2 -> run adder(i);
         :: else  -> run remover(i);
@@ -62,5 +62,5 @@ init {
     }
 }
 
-ltl sizeInvariant { always (size >= 0 && size <= THEADS_COUNT && size <= MAX_SIZE) };
+ltl sizeInvariant { always (size >= 0 && size <= THREADS_COUNT && size <= MAX_SIZE) };
 ltl assertThatSizeBecomeZero { eventually always (size == 0) }
