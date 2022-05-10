@@ -22,7 +22,7 @@ inline transferLocksToAwakened(number) {
 }
 
 inline wait(condition, number) {
-	hash = hash - number; // for ltl
+	atomic { hash = hash - number; } // for ltl
 	inCritSection--;
 
 	waiters++;
@@ -38,11 +38,11 @@ inline wait(condition, number) {
 	awakenedCount--;
 
 	inCritSection++;
-	hash = hash + number;
+	atomic { hash = hash + number; }
 }
 
 inline signal(condition, number) {
-	hash = hash - number;
+	atomic { hash = hash - number; }
 	inCritSection--;
 
 	if
@@ -56,11 +56,11 @@ inline signal(condition, number) {
 	fi;
 
 	inCritSection++;
-	hash = hash + number;
+	atomic { hash = hash + number; }
 }
 
 inline signalAll(condition, number) {
-	hash = hash - number;
+	atomic { hash = hash - number; }
 	inCritSection--;
 
 	if
@@ -75,7 +75,7 @@ inline signalAll(condition, number) {
 	fi;
 
 	inCritSection++;
-	hash = hash + number;
+	atomic { hash = hash + number; }
 }
 
 inline acquireSynchronized(number) {

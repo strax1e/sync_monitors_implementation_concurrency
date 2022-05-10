@@ -7,7 +7,7 @@ int inPurgatoryCount = 0;
 int pendingSignals = 0;
 
 inline waitBase(condition, number) {
-	hash = hash - number;
+	atomic { hash = hash - number; }
 	inCritSection--;
 
 	printf("%d going to wait\n", number);
@@ -20,7 +20,7 @@ inline waitBase(condition, number) {
 	printf("%d awoke\n", number);
 
 	inCritSection++;
-	hash = hash + number;
+	atomic { hash = hash + number; }
 }
 
 int countOfPendingSignalsAfterPurgatory = 0; // always must be zero

@@ -10,56 +10,56 @@ int size = 0;
  *   Blocking LIFO
  */
 inline add(number) {
-    enterCriticalSection(number);
+	enterCriticalSection(number);
 
-    do
-    :: (size == MAX_SIZE) ->
-        wait(blockingQueue, number);
-    :: else -> break;
-    od;
+	do
+	:: (size == MAX_SIZE) ->
+		wait(blockingQueue, number);
+	:: else -> break;
+	od;
 
-    queue[size] = number;
-    size++;
-    printf("%d added at %d\n", number, size)
-    signal(blockingQueue, number);
+	queue[size] = number;
+	size++;
+	printf("%d added at %d\n", number, size)
+	signal(blockingQueue, number);
 
-    exitCriticalSection(number);
+	exitCriticalSection(number);
 }
 
 inline remove(number) {
-    enterCriticalSection(number);
+	enterCriticalSection(number);
 
-    do
-    :: (size == 0) ->
-        wait(blockingQueue, number);
-    :: else -> break;
-    od;
+	do
+	:: (size == 0) ->
+		wait(blockingQueue, number);
+	:: else -> break;
+	od;
 
-    size--;
-    printf("removed: %d\n", queue[size])
-    signal(blockingQueue, number);
+	size--;
+	printf("removed: %d\n", queue[size])
+	signal(blockingQueue, number);
 
-    exitCriticalSection(number);
+	exitCriticalSection(number);
 }
 
 proctype adder(int number) {
-    add(number);
+	add(number);
 }
 
 proctype remover(int number) {
-    remove(number);
+	remove(number);
 }
 
 init {
-    initMonitor();
+	initMonitor();
 
-    int i;
-    for (i : 1.. THREADS_COUNT) {
-        if
-        :: i % 2 -> run adder(i);
-        :: else  -> run remover(i);
-        fi
-    }
+	int i;
+	for (i : 1.. THREADS_COUNT) {
+		if
+		:: i % 2 -> run adder(i);
+		:: else  -> run remover(i);
+		fi
+	}
 }
 
 ltl structInvariant { always (size >= 0 && size <= MAX_SIZE) };

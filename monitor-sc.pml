@@ -3,7 +3,7 @@
 #include "monitor-base.pml"
 
 inline wait(condition, number) {
-	hash = hash - number;
+	atomic { hash = hash - number; }
 	inCritSection--;
 
 	printf("%d going to wait\n", number);
@@ -17,7 +17,7 @@ inline wait(condition, number) {
 	acquire(outerLock, number, 'l');
 
 	inCritSection++;
-	hash = hash + number;
+	atomic { hash = hash + number; }
 }
 
 inline signal(condition, number) {
