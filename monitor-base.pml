@@ -30,7 +30,7 @@ inline release(channel, number, name) {
 inline awakeThread(condition, number) {
 	release(condition, number, 'c'); // signal()
 	waiters--;
-	printf("%d signal\n", number);
+	printf("%d signaled\n", number);
 }
 
 inline awakeAllThreads(condition, number) {

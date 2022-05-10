@@ -6,13 +6,13 @@ inline wait(condition, number) {
 	hash = hash - number;
 	inCritSection--;
 
+	printf("%d going to wait\n", number);
 	waiters++;
 	atomic {
 		release(outerLock, number, 'l');
-		printf("wait %d\n", number);
 		acquire(condition, number, 'b'); // wait()
 	}
-	printf("awake %d\n", number);
+	printf("%d awoke\n", number);
 	
 	acquire(outerLock, number, 'l');
 

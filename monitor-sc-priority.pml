@@ -10,31 +10,35 @@ inline waitBase(condition, number) {
 	hash = hash - number;
 	inCritSection--;
 
+	printf("%d going to wait\n", number);
 	waiters++;
-	// printf("wait %d\n", number);
 	atomic {
 		release(outerLock, number, 'l');
 		acquire(condition, number, 'c'); // wait()		
 		acquire(outerLock, number, 'l');
 	}
-	printf("awake %d\n", number);
+	printf("%d awoke\n", number);
 
 	inCritSection++;
 	hash = hash + number;
 }
 
+int countOfPendingSignalsAfterPurgatory = 0; // always must be zero
+
 inline waitPurgatory(number) {
 	inPurgatoryCount++;
 
-	// printf("wait %d\n", number);
+	printf("%d going to wait in purgatory\n", number);
 	atomic {
 		release(outerLock, number, 'l');
 		acquire(purgatory, number, 'c'); // wait()
 		acquire(outerLock, number, 'l');
 	}
-	printf("awake %d\n", number);
+	printf("%d awoke from purgatory\n", number);
 
 	inPurgatoryCount--;
+
+	countOfPendingSignalsAfterPurgatory = countOfPendingSignalsAfterPurgatory + pendingSignals;
 }
 
 inline wait(condition, number) {
@@ -50,6 +54,7 @@ inline wait(condition, number) {
 }
 
 inline signalPurgatory(number) {
+	printf("%d going to signal purgatory\n", number);
 	release(purgatory, number, 'c'); // signal()
 }
 
@@ -125,3 +130,5 @@ init {
 	initMonitor();
 	start(6);
 }
+
+ltl purgatoryInvariant { always (countOfPendingSignalsAfterPurgatory == 0) };

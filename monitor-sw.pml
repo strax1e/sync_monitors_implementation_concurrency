@@ -28,9 +28,9 @@ inline wait(condition, number) {
 	waiters++;
 	release(outerLock, number, 'o');
 
+	printf("%d going to wait\n", number);
 	atomic {
 		release(innerLock, number, 'i');
-		printf("%d wait\n", number);
 		acquire(condition, number, 'b'); // wait()
 	}
 
