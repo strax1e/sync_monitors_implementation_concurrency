@@ -144,10 +144,10 @@ inline initMonitor() {
 	release(innerLock, 0, 'i'); // init innerLock
 }
 
-// init {
-// 	initMonitor();
-// 	start(6);
-// }
+init {
+	initMonitor();
+	start(6);
+}
 
 /* signalAll(), 7 threads, exclusiveAccess
 ltl invariant: [] (! ((inCritSection>1)))

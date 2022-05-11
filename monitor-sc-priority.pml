@@ -129,9 +129,9 @@ inline initMonitor() {
 	release(outerLock, 0, 'l'); // init outerLock
 }
 
-// init {
-// 	initMonitor();
-// 	start(6);
-// }
+init {
+	initMonitor();
+	start(6);
+}
 
 ltl purgatoryInvariant { always (countOfPendingSignalsAfterPurgatory == 0) };
