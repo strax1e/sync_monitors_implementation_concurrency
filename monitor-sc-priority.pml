@@ -110,25 +110,28 @@ inline exitCriticalSection(number) {
 }
 
 proctype model(int number) {
-	enterCriticalSection(number);
+	do
+	:: true ->
+		enterCriticalSection(number);
 
-	if
-	:: (waiters < 2) ->
-		wait(blockingQueue, number);
-	:: else ->
-		signalAll(blockingQueue, number);
-	fi;
+		if
+		:: (waiters < 2) ->
+			wait(blockingQueue, number);
+		:: else ->
+			signalAll(blockingQueue, number);
+		fi;
 
-	exitCriticalSection(number);
+		exitCriticalSection(number);
+	od
 }
 
 inline initMonitor() {
 	release(outerLock, 0, 'l'); // init outerLock
 }
 
-init {
-	initMonitor();
-	start(6);
-}
+// init {
+// 	initMonitor();
+// 	start(6);
+// }
 
 ltl purgatoryInvariant { always (countOfPendingSignalsAfterPurgatory == 0) };

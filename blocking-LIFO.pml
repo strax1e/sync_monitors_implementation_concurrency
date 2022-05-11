@@ -1,7 +1,7 @@
 #include "monitor-sc.pml"
 
 #define THREADS_COUNT 6
-#define MAX_SIZE 2
+#define MAX_SIZE 3
 
 int queue[MAX_SIZE];
 int size = 0;
@@ -43,11 +43,17 @@ inline remove(number) {
 }
 
 proctype adder(int number) {
-	add(number);
+	do
+	:: true ->
+		add(number);
+	od
 }
 
 proctype remover(int number) {
-	remove(number);
+	do
+	:: true ->
+		remove(number);
+	od
 }
 
 init {
