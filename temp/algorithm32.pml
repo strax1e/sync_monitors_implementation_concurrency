@@ -194,23 +194,27 @@ inline posMessageListener(process) {
 }
 
 inline printProcknown(process) {
-  printf("Procknown for process with id [%d]: { ", process.id);
-  int i;
-  for (i : 0..(process.procknownSize - 1)) {
-    printf("%d ", process.procknown[i]);
+  atomic {
+    printf("Procknown for process with id [%d]: { ", process.id);
+    int i;
+    for (i : 0..(process.procknownSize - 1)) {
+      printf("%d ", process.procknown[i]);
+    }
+    printf("}\n");
   }
-  printf("}\n");
 }
 
 inline printChanknown(process) {
-  printf("Chanknown for process with id [%d]: { ", process.id);
-  int i;
-  for (i : 0..(process.chanknownSize - 1)) {
-    int first = process.chanknown[i].first;
-    int second = process.chanknown[i].second;
-    printf("[%d, %d] ", first, second);
+  atomic {
+    printf("Chanknown for process with id [%d]: { ", process.id);
+    int i;
+    for (i : 0..(process.chanknownSize - 1)) {
+      int first = process.chanknown[i].first;
+      int second = process.chanknown[i].second;
+      printf("[%d, %d] ", first, second);
+    }
+    printf("}\n");
   }
-  printf("}\n");
 }
 
 proctype main(int index) {
@@ -224,6 +228,8 @@ proctype main(int index) {
     posMessageListener(currentProcess);
   :: else -> break;
   od;
+  
+  printf("Stopping process with id [%d]\n", currentProcess.id);
   // TODO: Add LTL
 }
 
