@@ -24,5 +24,5 @@ inline sendMessage(source, channels, index) {
 }
 
 init {
-  printf("Arrays init\n");
+  printf("");
 }

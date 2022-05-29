@@ -24,6 +24,7 @@ ChannelsArray channelsWithPosMessage;
 ChannelsArray channelsWithStartMessage;
 Process processes[PROCESSES_AMOUNT];
 bool everyoneKnowsAllProcesses = false;
+bool resultsPrinted = false;
 
 inline copyProcess(source, target) {
   target.id = source.id;
@@ -71,6 +72,7 @@ inline sendInfoAboutCurrentProcessToNeighbors(process) {
 }
 
 inline start(process) {
+  printf("start() for process with id [%d]\n", process.id);
   sendInfoAboutCurrentProcessToNeighbors(process);
   process.part = true;
 }
@@ -78,7 +80,6 @@ inline start(process) {
 inline safetyStart(process) {
   if 
   :: (!process.part) -> 
-    printf("safetyStart (before) [%d]\n", process.id);
     start(process);
   :: else
   fi
@@ -87,6 +88,7 @@ inline safetyStart(process) {
 inline startMessageListener(process) {
   if
   :: isNotEmpty(channelsWithStartMessage, process.id) ->
+    printf("startMessageListener() for process with id [%d]\n", process.id);
     getMessage(START, channelsWithStartMessage, process.id);
     safetyStart(process);
   :: isEmpty(channelsWithStartMessage, process.id)
@@ -151,19 +153,20 @@ inline existsUnknownProcess(result, process) {
 }
 
 inline posMessageListener(process) {
+
   if
   :: isNotEmpty(channelsWithPosMessage, process.id) ->
-    printf("posMessageListener isNotEmpty [%d]\n", process.id);
+    printf("posMessageListener() for process with id [%d]\n", process.id);
     safetyStart(process);
 
     POS recievedMessage;
     getMessage(recievedMessage, channelsWithPosMessage, process.id);
 
-    bool isUnknownProcess = true;
-    procknownContains(isUnknownProcess, process, recievedMessage.firstSenderId)
+    bool isKnownProcess = true;
+    procknownContains(isKnownProcess, process, recievedMessage.firstSenderId)
 
     if
-    :: isUnknownProcess ->
+    :: !isKnownProcess ->
       addForeignProcessIdToCurrentProcess(process, recievedMessage);
       addForeignNeighborsToCurrentProcess(process, recievedMessage);
       resendRecievedMessageToNeighbors(process, recievedMessage);
@@ -173,8 +176,13 @@ inline posMessageListener(process) {
       if
       :: !existsUnknownProcessVar-> 
         everyoneKnowsAllProcesses = true;
-        printProcknown(process);
-        printChanknown(process);
+        if
+        :: !resultsPrinted ->
+          resultsPrinted = true;
+          printProcknown(process);
+          printChanknown(process);
+        :: else
+        fi;
       :: else
       fi;
 
@@ -186,7 +194,7 @@ inline posMessageListener(process) {
 }
 
 inline printProcknown(process) {
-  printf("Procknown for process with id [%d]: {", process.id);
+  printf("Procknown for process with id [%d]: { ", process.id);
   int i;
   for (i : 0..(process.procknownSize - 1)) {
     printf("%d ", process.procknown[i]);
@@ -195,7 +203,7 @@ inline printProcknown(process) {
 }
 
 inline printChanknown(process) {
-  printf("Chanknown for process with id [%d]: {", process.id);
+  printf("Chanknown for process with id [%d]: { ", process.id);
   int i;
   for (i : 0..(process.chanknownSize - 1)) {
     int first = process.chanknown[i].first;
@@ -216,7 +224,7 @@ proctype main(int index) {
     posMessageListener(currentProcess);
   :: else -> break;
   od;
-  // TODO: Add output with procknown and chanknown
+  // TODO: Add LTL
 }
 
 init {
