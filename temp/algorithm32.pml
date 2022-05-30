@@ -1,6 +1,5 @@
 #include "channels-array.pml"
 #define START 1001
-#define PROCESSES_AMOUNT 4
 
 typedef Pair {
   int first;
@@ -11,9 +10,9 @@ typedef Process {
   int id;
   bool part;
 
-  int neighbors[N];
-  int procknown[N];
-  Pair chanknown[N];
+  int neighbors[PROCESSES_AMOUNT];
+  int procknown[PROCESSES_AMOUNT];
+  Pair chanknown[MAX_CHANNELS_COUNT_BETWEEN_PROCESSES];
 
   int neighborsSize;
   int procknownSize;
@@ -229,7 +228,7 @@ proctype main(int index) {
   :: else -> break;
   od;
   
-  printf("Stopping process with id [%d]\n", currentProcess.id);
+  printf("Stopping process with id [%d], wasOnlyUniqueMessages [%d]\n", currentProcess.id, wasOnlyUniqueMessages);
   // TODO: Add LTL
 }
 

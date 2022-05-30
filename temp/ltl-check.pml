@@ -1,5 +1,6 @@
-#define N 30
-#define MAX_CHAN_SIZE 100
+#define MAX_CHAN_SIZE 25
+#define PROCESSES_AMOUNT 4
+#define MAX_CHANNELS_COUNT_BETWEEN_PROCESSES (PROCESSES_AMOUNT * (PROCESSES_AMOUNT - 1))
 #define MAX_LTL_ARRAY_SIZE MAX_CHAN_SIZE
 
 typedef Tuple {
@@ -13,7 +14,7 @@ typedef LtlArray {
   int size = 0;
 }
 
-LtlArray posMessagesForLtlConstraintCheck[N];
+LtlArray posMessagesForLtlConstraintCheck[PROCESSES_AMOUNT];
 bool wasOnlyUniqueMessages = true;
 ltl onlyUniqueMessages { always wasOnlyUniqueMessages }
 
@@ -56,4 +57,8 @@ inline addNewMessageToLtlArray(source, index) {
     :: else
     fi;
   }
+}
+
+active proctype fakeProcess() {
+  printf("temp proctype ltl-check");
 }
