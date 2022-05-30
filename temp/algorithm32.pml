@@ -67,7 +67,7 @@ inline sendInfoAboutCurrentProcessToNeighbors(process) {
     int targetProcessId = process.neighbors[i];
     POS pos;
     fillPosMessageWithFirstSender(pos, process, process.id);
-    sendMessage(pos, channelsWithPosMessage, targetProcessId);
+    sendPosMessage(pos, channelsWithPosMessage, targetProcessId);
   }
 }
 
@@ -128,7 +128,7 @@ inline resendRecievedMessageToNeighbors(process, recievedMessage) {
   for (i : 0..(process.neighborsSize - 1)) {
     if 
     :: (recievedMessage.senderId != i) ->
-      sendMessage(recievedMessage, channelsWithPosMessage, i);
+      sendPosMessage(recievedMessage, channelsWithPosMessage, i);
     :: else
     fi;
   }
@@ -292,7 +292,7 @@ init {
   processes[3].procknownSize = 1;
   processes[3].procknown[0] = processes[3].id;
 
-  sendMessage(START, channelsWithStartMessage, 1);
+  sendStartMessage(START, channelsWithStartMessage, 1);
 
   run main(processes[0].id);
   run main(processes[1].id);

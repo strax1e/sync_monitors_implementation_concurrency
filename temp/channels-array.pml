@@ -1,5 +1,4 @@
-#define N 10
-#define MAX_CHAN_SIZE 100
+#include "ltl-check.pml"
 
 typedef POS {
   int firstSenderId;  // first p_x
@@ -19,10 +18,11 @@ inline getMessage(target, channels, index) {
   channels.inner[index] ? target;
 }
 
-inline sendMessage(source, channels, index) {
+inline sendPosMessage(source, channels, index) {
+  addNewMessageToLtlArray(source, index)
   channels.inner[index] ! source;
 }
 
-init {
-  printf("");
+inline sendStartMessage(source, channels, index) {
+  channels.inner[index] ! source;
 }
