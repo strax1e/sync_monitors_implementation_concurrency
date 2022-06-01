@@ -14,19 +14,29 @@ typedef ChannelsArray {
   chan inner[PROCESSES_AMOUNT] = [MAX_CHAN_SIZE] of {POS};
 };
 
+typedef ChannelsIntArray {
+  chan inner[PROCESSES_AMOUNT] = [MAX_CHAN_SIZE] of {int};
+};
+
 inline getMessage(target, channels, index) {
   channels.inner[index] ? target;
 }
 
 inline sendPosMessage(source, channels, index) {
-  addNewMessageToLtlArray(source, index)
-  channels.inner[index] ! source;
+  atomic {
+    printf("send - to [%d], message = POS(firstSenderId = %d, senderId = %d, neighborsSize = %d)\n", index, source.firstSenderId, source.senderId, source.neighborsSize);
+    addNewMessageToLtlArray(source, index)
+    channels.inner[index] ! source;
+  }
 }
 
 inline sendStartMessage(source, channels, index) {
-  channels.inner[index] ! source;
+  atomic {
+    printf("send - to [%d], message = START\n", index);
+    channels.inner[index] ! source;
+  }
 }
 
 active proctype fakeProcess1() {
-  printf("temp proctype channels-array");
+  printf("");
 }

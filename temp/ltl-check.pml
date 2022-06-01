@@ -1,4 +1,4 @@
-#define MAX_CHAN_SIZE 25
+#define MAX_CHAN_SIZE 15
 #define PROCESSES_AMOUNT 4
 #define MAX_CHANNELS_COUNT_BETWEEN_PROCESSES (PROCESSES_AMOUNT * (PROCESSES_AMOUNT - 1))
 #define MAX_LTL_ARRAY_SIZE MAX_CHAN_SIZE
@@ -60,5 +60,5 @@ inline addNewMessageToLtlArray(source, index) {
 }
 
 active proctype fakeProcess() {
-  printf("temp proctype ltl-check");
+  printf("");
 }
